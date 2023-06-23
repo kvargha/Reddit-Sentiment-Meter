@@ -10,10 +10,20 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_sqs_queue" "sentiment_queue" {
-  name = var.sqs_name
+// Create DynamoDB
+resource "aws_dynamodb_table" "reddit-sentiment-db" {
+  name = "reddit-sentiment"
+  billing_mode = "PROVISIONED"
+  read_capacity= "25"
+  write_capacity= "25"
+  attribute {
+    name = "date"
+    type = "S"
+  }
+  hash_key = "date"
 }
 
+// Create role for redditor consumer lambda
 resource "aws_iam_role" "reddit-consumer-role" {
   name = "reddit-consumer-role"
   assume_role_policy = jsonencode({
@@ -46,12 +56,12 @@ resource "aws_iam_policy" "reddit-consumer-policy" {
         "comprehend:DetectSentiment"
       ]
       Resource = ["*"]
-    }, {
+    },{
       Effect = "Allow"
       Action = [
-        "sqs:SendMessage"
+        "dynamodb:UpdateItem"
       ]
-      Resource = ["${aws_sqs_queue.sentiment_queue.arn}"]
+      Resource = ["${aws_dynamodb_table.reddit-sentiment-db.arn}"]
     }]
   })
 }
@@ -61,13 +71,34 @@ resource "aws_iam_role_policy_attachment" "reddit-consumer" {
   role = aws_iam_role.reddit-consumer-role.name
 }
 
-resource "aws_lambda_function" "reddit-consumer" {
-  reserved_concurrent_executions = 1
+// Provisioner to install dependencies in lambda package before upload it.
+resource "null_resource" "reddit-consumer" {
 
+  triggers = {
+    updated_at = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = "npm install"
+
+    working_dir = "${path.module}/reddit-consumer/"
+  }
+}
+
+// Archive reddit consumer lambda
+data "archive_file" "reddit-consumer" {
+  type        = "zip"
+  source_dir  = "reddit-consumer/"
+  output_path = "${path.module}/.terraform/archive_files/reddit-consumer-function.zip"
+
+  depends_on = [null_resource.reddit-consumer]
+}
+
+// Create reddit consumer lambda
+resource "aws_lambda_function" "reddit-consumer" {
   function_name    = "reddit-consumer"
-  filename         = "./reddit-consumer/target/reddit-consumer-1.0.0.jar"
-  source_code_hash = filebase64sha256("./reddit-consumer/target/reddit-consumer-1.0.0.jar")
+  filename         = "${path.module}/.terraform/archive_files/reddit-consumer-function.zip"
   handler          = "index.handler"
   role             = aws_iam_role.reddit-consumer-role.arn
-  runtime          = "java17"
+  runtime          = "nodejs18.x"
 }

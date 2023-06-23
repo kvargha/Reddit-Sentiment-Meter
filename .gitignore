@@ -4,3 +4,6 @@
 .terraform.lock.hcl
 terraform.tfstate.backup
 terraform.tfstate.backup
+
+reddit-producer.zip
+secrets.json

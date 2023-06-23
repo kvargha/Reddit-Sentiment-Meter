@@ -8,7 +8,7 @@ export const handler = async (event) => {
     
     const comprehendParams = {
         LanguageCode: 'en',
-        Text: event.text
+        Text: event[0].payload.value.toString()
     };
     
     // Extract sentiment from Reddit comment

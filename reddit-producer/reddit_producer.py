@@ -2,9 +2,17 @@ import json
 import praw
 from confluent_kafka import Producer
 
+# Generates 4229 comments per minute
+# 253,740 comments per hour
+# 6,089,760 comments per day
+# 182,692,800 comments per month
+
+# If we do batches of 20 we can reduce it to 9,134,640 lambda invocations per month
+# Or 304,488 per day
+
 # Grab secrets
 secrets = {}
-with open('secrets.json', 'r') as f:
+with open("secrets.json", "r") as f:
     secrets = json.load(f)
 
 REDDIT_CLIENT_ID = secrets["REDDIT_CLIENT_ID"]
@@ -35,4 +43,5 @@ for comment in reddit.subreddit("all").stream.comments(skip_existing=True):
 
     # Only produce messages that contain text
     if not text.isnumeric():
-        producer.produce(KAFKA_TOPIC, value=str(comment.body))
+        # Convert comment to bytes
+        producer.produce(KAFKA_TOPIC, value=bytes(text, 'utf-8'))

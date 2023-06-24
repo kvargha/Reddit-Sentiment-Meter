@@ -4,26 +4,9 @@ import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
 export const handler = async (event) => {
     const region = 'us-west-2';
+
+    // Create Comprehend client
     const comprehendClient = new ComprehendClient({ region: region });
-    
-    const comprehendParams = {
-        LanguageCode: 'en',
-        Text: event[0].payload.value.toString()
-    };
-    
-    // Extract sentiment from Reddit comment
-    const sentimentCommand = new DetectSentimentCommand(comprehendParams);
-    const data = await comprehendClient.send(sentimentCommand);
-    // Possible values: positive | negative | neutral | mixed
-    const detectedSentiment = data.Sentiment.toLowerCase();
-
-    // If sentiment is positive or neutral, set it to positive
-    let sentiment = 'positive';
-
-    // If sentiment is negative or mixed, set it to negative
-    if (detectedSentiment === 'negative' || detectedSentiment === 'mixed') {
-        sentiment = 'negative';
-    }
 
     // Create DynamoDB client
     const dynamoDBClient = new DynamoDBClient({ region: region });
@@ -31,19 +14,63 @@ export const handler = async (event) => {
 
     const todaysDate = getTodaysDateFormatted();
 
+    // Stores a list of promises that will be resolved later
+    let promises = [];
+
+    // Counter for number of negative and positive sentiments detected
+    let numPositive = 0;
+    let numNegative = 0;
+
+    // Use AWS Comprehend to detect sentiment
+    const detectSentiment = async (input) => {
+        // Text sent is base64 encoded. Decode it.
+        const base64Text = input.payload.value.toString();
+        const decodedText = Buffer.from(base64Text, 'base64').toString('utf-8');
+    
+        const comprehendParams = {
+            LanguageCode: 'en',
+            Text: decodedText
+        };
+    
+        // Extract sentiment from Reddit comment
+        const sentimentCommand = new DetectSentimentCommand(comprehendParams);
+        const data = await comprehendClient.send(sentimentCommand);
+        // Possible values: positive | negative | neutral | mixed
+        const detectedSentiment = data.Sentiment.toLowerCase();
+
+        // If sentiment is negative or mixed, increment negative count
+        if (detectedSentiment === 'negative' || detectedSentiment === 'mixed') {
+            numNegative++;
+        } else {
+            // If sentiment is positive or neutral, increment positive count
+            numPositive++;
+        }
+    }
+    
+    // Process batched events from Kafka
+    for (let i = 0; i < event.length; i++) {
+        // Asynchronously process each event
+        promises.push(detectSentiment(event[0]));
+    }
+
+    // Wait for all asynchronous processes to finish
+    await Promise.all(promises)
+
     // Increment todays counter based on sentiment
     const dynamoDBCommand = new UpdateCommand({
         TableName: 'reddit-sentiment',
         Key: {
             date: todaysDate
         },
-        UpdateExpression: 'SET #attrPath = if_not_exists(#attrPath, :start) + :inc',
+        UpdateExpression: 'SET #positive = if_not_exists(#positive, :start) + :positiveIncr, #negative = if_not_exists(#negative, :start) + :negativeIncr',
         ExpressionAttributeNames: {
-            '#attrPath': sentiment
+            '#positive': 'positive',
+            '#negative': 'negative'
         },
         ExpressionAttributeValues: {
             ':start': 0,
-            ':inc': 1
+            ':positiveIncr': numPositive,
+            ':negativeIncr': numNegative,
         },
         ReturnValues: 'UPDATED_NEW',
     });
@@ -51,7 +78,7 @@ export const handler = async (event) => {
 
     const response = {
         statusCode: 200,
-        body: JSON.stringify(`${sentiment} sentiment detected.`),
+        body: JSON.stringify('Success.')
     };
     return response;
 };

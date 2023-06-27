@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import { 
   CssBaseline,
@@ -33,6 +33,36 @@ function App() {
   const [numComments, setNumComments] = useState<number>(0);
   const [doomPercent, setDoomPercent] = useState<number>(0);
 
+  // Calls Lambda API to get the number of comments and doom levels
+  const callDoomAPI = async () => {
+    try {
+      const response = await fetch("https://uqqojl9mv5.execute-api.us-west-2.amazonaws.com/prod/doom-level");
+      const data = await response.json();
+      
+      // Process the retrieved data
+      setNumComments(data["numComments"])
+      setDoomPercent(data["doomLevel"])
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Interval time in milliseconds (e.g., 5 seconds)
+    const intervalTime = 5000;
+
+    // Make initial call
+    callDoomAPI();
+
+    // Start the interval
+    const intervalId = setInterval(callDoomAPI, intervalTime);
+
+    // Clean up the interval on component unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <ThemeProvider theme={darkTheme}>
       <Box sx={{ flexGrow: 1 }}>
@@ -48,7 +78,7 @@ function App() {
         <Main>
 
           <Odometer className="odometer" value={numComments} format="(,ddd)" style={{color: "white"}}/>
-          <Typography variant="h5">Reddit Comments Analyzed</Typography>
+          <Typography variant="h5">Reddit Comments Analyzed Today</Typography>
 
           <GaugeComponent
             className="gauge"
@@ -85,7 +115,7 @@ function App() {
             pointer={{type: "needle"}}
           />
 
-          <Typography variant="h5">Doom Levels</Typography>
+          <Typography variant="h5">Doomer Level</Typography>
         </Main>
       </Box>
     </ThemeProvider>

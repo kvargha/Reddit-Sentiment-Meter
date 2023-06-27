@@ -297,6 +297,13 @@ resource "aws_lambda_function" "sentiment-api" {
 resource "aws_apigatewayv2_api" "sentiment-api" {
   name          = "sentiment-api-gateway"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["GET"]
+    allow_headers = ["*"]
+    max_age = 300
+  }
 }
 
 resource "aws_apigatewayv2_stage" "sentiment-api" {
@@ -309,16 +316,16 @@ resource "aws_apigatewayv2_stage" "sentiment-api" {
     destination_arn = aws_cloudwatch_log_group.sentiment-api-gateway.arn
 
     format = jsonencode({
-      requestId               = "$context.requestId"
-      sourceIp                = "$context.identity.sourceIp"
-      requestTime             = "$context.requestTime"
-      protocol                = "$context.protocol"
-      httpMethod              = "$context.httpMethod"
-      resourcePath            = "$context.resourcePath"
-      routeKey                = "$context.routeKey"
-      status                  = "$context.status"
-      responseLength          = "$context.responseLength"
-      integrationErrorMessage = "$context.integrationErrorMessage"
+        requestId               = "$context.requestId"
+        sourceIp                = "$context.identity.sourceIp"
+        requestTime             = "$context.requestTime"
+        protocol                = "$context.protocol"
+        httpMethod              = "$context.httpMethod"
+        resourcePath            = "$context.resourcePath"
+        routeKey                = "$context.routeKey"
+        status                  = "$context.status"
+        responseLength          = "$context.responseLength"
+        integrationErrorMessage = "$context.integrationErrorMessage"
       }
     )
   }
@@ -352,4 +359,109 @@ resource "aws_lambda_permission" "sentiment-api-gateway" {
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.sentiment-api.execution_arn}/*/*"
+}
+
+# Create frontend bucket
+resource "aws_s3_bucket" "doomermeter" {
+  bucket = "doomermeter"
+}
+
+resource "aws_s3_bucket_ownership_controls" "doomermeter" {
+  bucket = aws_s3_bucket.doomermeter.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "doomermeter" {
+  bucket = aws_s3_bucket.doomermeter.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_acl" "doomermeter" {
+  depends_on = [
+    aws_s3_bucket_ownership_controls.doomermeter,
+    aws_s3_bucket_public_access_block.doomermeter,
+  ]
+
+  bucket = aws_s3_bucket.doomermeter.id
+  acl    = "public-read"
+}
+
+resource "aws_s3_bucket_policy" "doomermeter" {
+  bucket = "${aws_s3_bucket.doomermeter.id}"
+
+  policy = <<POLICY
+  {
+    "Version":"2012-10-17",
+    "Statement":[{
+      "Sid":"AddPerm",
+      "Effect":"Allow",
+      "Principal":"*",
+      "Action":["s3:GetObject"],
+      "Resource":["arn:aws:s3:::doomermeter/*"]
+    }]
+  }
+  POLICY
+
+  depends_on = [aws_s3_bucket_acl.doomermeter]
+}
+
+resource "aws_s3_bucket_website_configuration" "doomermeter" {
+  bucket = aws_s3_bucket.doomermeter.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+}
+
+// Provisioner to install dependencies in doomermeter
+resource "null_resource" "doomermeter-install" {
+
+  triggers = {
+    updated_at = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = "npm install"
+
+    working_dir = "${path.module}/frontend/"
+  }
+}
+
+// Creates build
+resource "null_resource" "doomermeter-build" {
+
+  triggers = {
+    updated_at = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = "npm run build"
+
+    working_dir = "${path.module}/frontend/"
+  }
+
+  depends_on = [null_resource.doomermeter-install]
+}
+
+// Upload build files
+resource "aws_s3_object" "doomermeter-build" {
+  for_each      = fileset(var.frontend_upload_directory, "**/*.*")
+  bucket        = aws_s3_bucket.doomermeter.bucket
+  key           = replace(each.value, var.frontend_upload_directory, "")
+  source        = "${var.frontend_upload_directory}${each.value}"
+  acl           = "public-read"
+  etag          = filemd5("${var.frontend_upload_directory}${each.value}")
+  content_type  = lookup(var.mime_types, split(".", each.value)[length(split(".", each.value)) - 1])
+
+  depends_on = [null_resource.doomermeter-build]
 }

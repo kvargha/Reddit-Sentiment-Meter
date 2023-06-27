@@ -31,7 +31,9 @@ export const handler = async () => {
 
         numComments = positiveCount + negativeCount;
 
-        doomLevel = roundToTwo((negativeCount / numComments) * 100);
+        if (numComments > 0) {
+            doomLevel = roundToTwo((negativeCount / numComments) * 100);
+        }
     }
 
     return {

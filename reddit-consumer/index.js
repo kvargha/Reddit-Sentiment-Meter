@@ -2,6 +2,7 @@ import { ComprehendClient, DetectSentimentCommand } from "@aws-sdk/client-compre
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 
+// Example payload: https://docs.confluent.io/kafka-connectors/aws-lambda/current/overview.html#lambda-payload
 export const handler = async (event) => {
     const region = 'us-west-2';
 
@@ -50,7 +51,7 @@ export const handler = async (event) => {
     // Process batched events from Kafka
     for (let i = 0; i < event.length; i++) {
         // Asynchronously process each event
-        promises.push(detectSentiment(event[0]));
+        promises.push(detectSentiment(event[i]));
     }
 
     // Wait for all asynchronous processes to finish
@@ -78,7 +79,7 @@ export const handler = async (event) => {
 
     const response = {
         statusCode: 200,
-        body: 'Success.'
+        body: JSON.stringify('Success.')
     };
     return response;
 };

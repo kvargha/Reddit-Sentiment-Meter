@@ -31,7 +31,7 @@ const Main = styled("main")<{}>(({ theme }) => ({
 
 function App() {
   const [numComments, setNumComments] = useState<number>(0);
-  const [doomPercent, setDoomPercent] = useState<number>(99.322);
+  const [doomPercent, setDoomPercent] = useState<number>(0);
 
   return (
     <ThemeProvider theme={darkTheme}>

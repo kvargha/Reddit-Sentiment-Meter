@@ -217,4 +217,139 @@ resource "aws_instance" "reddit-producer" {
   }
 
   depends_on = [aws_s3_object.reddit-producer]
-} 
+}
+
+// Create role for sentiment-api lambda
+resource "aws_iam_role" "sentiment-api-role" {
+  name = "sentiment-api-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "sentiment-api-policy" {
+  name   = "sentiment-api-policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+      Resource = ["arn:aws:logs:*:*:*"]
+    },{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:GetItem"
+      ]
+      Resource = ["${aws_dynamodb_table.reddit-sentiment-db.arn}"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "sentiment-api" {
+  policy_arn = aws_iam_policy.sentiment-api-policy.arn
+  role = aws_iam_role.sentiment-api-role.name
+}
+
+// Provisioner to install dependencies in lambda package before upload it.
+resource "null_resource" "sentiment-api" {
+
+  triggers = {
+    updated_at = timestamp()
+  }
+
+  provisioner "local-exec" {
+    command = "npm install"
+
+    working_dir = "${path.module}/sentiment-api/"
+  }
+}
+
+// Archive sentiment-api lambda
+data "archive_file" "sentiment-api" {
+  type        = "zip"
+  source_dir  = "sentiment-api/"
+  output_path = "${path.module}/.terraform/archive_files/sentiment-api-function.zip"
+
+  depends_on = [null_resource.sentiment-api]
+}
+
+// Create sentiment-api lambda
+resource "aws_lambda_function" "sentiment-api" {
+  function_name    = "sentiment-api"
+  filename         = "${path.module}/.terraform/archive_files/sentiment-api-function.zip"
+  handler          = "index.handler"
+  role             = aws_iam_role.sentiment-api-role.arn
+  runtime          = "nodejs18.x"
+}
+
+// Create API Gateway to sentiment-api
+resource "aws_apigatewayv2_api" "sentiment-api" {
+  name          = "sentiment-api-gateway"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_stage" "sentiment-api" {
+  api_id = aws_apigatewayv2_api.sentiment-api.id
+
+  name        = "prod"
+  auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.sentiment-api-gateway.arn
+
+    format = jsonencode({
+      requestId               = "$context.requestId"
+      sourceIp                = "$context.identity.sourceIp"
+      requestTime             = "$context.requestTime"
+      protocol                = "$context.protocol"
+      httpMethod              = "$context.httpMethod"
+      resourcePath            = "$context.resourcePath"
+      routeKey                = "$context.routeKey"
+      status                  = "$context.status"
+      responseLength          = "$context.responseLength"
+      integrationErrorMessage = "$context.integrationErrorMessage"
+      }
+    )
+  }
+}
+
+resource "aws_apigatewayv2_integration" "sentiment-api" {
+  api_id = aws_apigatewayv2_api.sentiment-api.id
+
+  integration_uri    = aws_lambda_function.sentiment-api.invoke_arn
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+}
+
+resource "aws_apigatewayv2_route" "sentiment-api" {
+  api_id = aws_apigatewayv2_api.sentiment-api.id
+
+  route_key = "GET /doom-level"
+  target    = "integrations/${aws_apigatewayv2_integration.sentiment-api.id}"
+}
+
+resource "aws_cloudwatch_log_group" "sentiment-api-gateway" {
+  name = "/aws/api_gateway/${aws_apigatewayv2_api.sentiment-api.name}"
+
+  retention_in_days = 30
+}
+
+resource "aws_lambda_permission" "sentiment-api-gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.sentiment-api.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.sentiment-api.execution_arn}/*/*"
+}

@@ -6,6 +6,11 @@ jobs:
     working_directory: ~/frontend
     steps:
       - checkout
+      - run:
+          name: Check Scripts
+          command: |
+            pwd
+            ls
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package.json" }}

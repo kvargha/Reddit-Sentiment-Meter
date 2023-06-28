@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Deploy to S3
           command: |
-            aws s3 sync build/ $BUCKET_NAME --delete
+            aws s3 sync build/ $S3_BUCKET_URI --delete
       - run:
           name: Create CloudFront invalidation
           command: |

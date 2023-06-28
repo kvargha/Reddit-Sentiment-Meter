@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  aws-cli: circleci/aws-cli
 jobs:
   build:
     docker:
@@ -28,7 +30,7 @@ jobs:
             - build
   deploy:
     docker:
-      - image: circleci/aws-cli:latest
+      - image: node:18
     working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout:

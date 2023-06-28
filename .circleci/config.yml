@@ -21,7 +21,7 @@ jobs:
             - node_modules
       - run:
           name: Build application
-          command: npm build
+          command: npm run build
   deploy:
     docker:
       - image: circleci/aws-cli

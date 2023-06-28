@@ -2,16 +2,11 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/node:14
+      - image: node:18
     working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout:
           path: ~/DoomerMeter
-      - run:
-          name: Check Scripts
-          command: |
-            pwd
-            ls
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package.json" }}

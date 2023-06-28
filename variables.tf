@@ -3,6 +3,21 @@ variable "region" {
     default = "us-west-2"
 }
 
+variable "root_domain" {
+    type = string
+    default = "kvargha.com"
+}
+
+variable "domain" {
+    type = string
+    default = "doomermeter.kvargha.com"
+}
+
+variable "ssl-cert-arn" {
+    type = string
+    default = "arn:aws:acm:us-east-1:447400660620:certificate/85f7708a-764d-445b-9938-9de0dcaf61a7"
+}
+
 variable "ssh-key-pair-name" {
     type = string
     default = "reddit-producer"

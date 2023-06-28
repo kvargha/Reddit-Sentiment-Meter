@@ -39,15 +39,15 @@ jobs:
           key: v1-pkg-cache
       - run: go get -v github.com/bep/s3deploy
       - save_cache:
-        key: v1-pkg-cache
-        paths:
-          - /go/pkg
+          key: v1-pkg-cache
+          paths:
+            - /go/pkg
       - run:
-        name: Deploy to S3 and Cloudfront
-        command: |
-          s3 deploy -source=build/ -region=$AWS_REGION -key=$AWS_ACCESS_KEY_ID
-            -secret=$AWS_SECRET_ACCESS_KEY -distribution-id=$AWS_CLOUDFRONT_DISTRIBUTION_ID
-            -bucket=$BUCKET_NAME
+          name: Deploy to S3 and Cloudfront
+          command: |
+            s3 deploy -source=build/ -region=$AWS_REGION -key=$AWS_ACCESS_KEY_ID
+              -secret=$AWS_SECRET_ACCESS_KEY -distribution-id=$AWS_CLOUDFRONT_DISTRIBUTION_ID
+              -bucket=$BUCKET_NAME
 
 workflows:
   version: 2

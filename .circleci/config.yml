@@ -43,7 +43,7 @@ jobs:
         paths:
           - /go/pkg
       - run:
-        name:
+        name: Deploy to S3 and Cloudfront
         command: |
           s3 deploy -source=build/ -region=$AWS_REGION -key=$AWS_ACCESS_KEY_ID
             -secret=$AWS_SECRET_ACCESS_KEY -distribution-id=$AWS_CLOUDFRONT_DISTRIBUTION_ID

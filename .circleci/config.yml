@@ -2,6 +2,8 @@ version: 2.1
 
 jobs:
   build:
+    docker:
+      - image: node:18
     working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout:

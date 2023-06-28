@@ -6,7 +6,7 @@ jobs:
     working_directory: ~/doomermeter
     steps:
       - checkout
-      - attatch_workspace:
+      - attach_workspace:
           at: ~/doomermeter
       - restore_cache:
           keys:
@@ -29,7 +29,7 @@ jobs:
     working_directory: ~/doomermeter
     steps:
       - checkout
-      - attatch_workspace:
+      - attach_workspace:
           at: ~/doomermeter
       - run:
           name: Deploy to S3

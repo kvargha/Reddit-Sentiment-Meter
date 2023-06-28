@@ -23,7 +23,7 @@ jobs:
           name: Build application
           command: npm run build
       - persist_to_workspace:
-          root: frontend
+          root: .
           paths: 
             - build
   deploy:
@@ -34,7 +34,7 @@ jobs:
       - checkout:
           path: ~/DoomerMeter
       - attach_workspace:
-          at: frontend
+          at: .
       - run:
           name: Deploy to S3
           command: |

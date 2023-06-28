@@ -6,8 +6,6 @@ jobs:
     working_directory: ~/frontend
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/frontend
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package.json" }}
@@ -29,8 +27,6 @@ jobs:
     working_directory: ~/frontend
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/frontend
       - run:
           name: Deploy to S3
           command: |

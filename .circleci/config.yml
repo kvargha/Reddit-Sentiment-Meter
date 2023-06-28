@@ -28,26 +28,21 @@ jobs:
             - build
   deploy:
     docker:
-      - image: circleci/golang:1.9.6
+      - image: circleci/aws-cli:latest
     working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout:
           path: ~/DoomerMeter
       - attach_workspace:
           at: .
-      - restore_cache:
-          key: v1-pkg-cache
-      - run: go get -v github.com/bep/s3deploy
-      - save_cache:
-          key: v1-pkg-cache
-          paths:
-            - /go/pkg
       - run:
-          name: Deploy to S3 and Cloudfront
+          name: Deploy to S3
           command: |
-            s3 deploy -source=build/ -region=$AWS_REGION -key=$AWS_ACCESS_KEY_ID
-              -secret=$AWS_SECRET_ACCESS_KEY -distribution-id=$AWS_CLOUDFRONT_DISTRIBUTION_ID
-              -bucket=$BUCKET_NAME
+            aws s3 sync build/ $BUCKET_NAME --delete
+      - run:
+          name: Create CloudFront invalidation
+          command: |
+            aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
 
 workflows:
   version: 2

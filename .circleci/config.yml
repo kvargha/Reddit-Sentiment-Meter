@@ -1,0 +1,45 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/node:14
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package.json" }}
+      - run:
+          name: Install dependencies
+          command: yarn install --frozen-lockfile
+      - save_cache:
+          key: v1-dependencies-{{ checksum "package.json" }}
+          paths:
+            - node_modules
+      - run:
+          name: Build application
+          command: yarn build
+  deploy:
+    docker:
+      - image: circleci/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Deploy to S3
+          command: |
+            aws s3 sync build/ $BUCKET_NAME --delete
+      - run:
+          name: Create CloudFront invalidation
+          command: |
+            aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION_ID --paths "/*"
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+        filters:
+          branches:
+            only:
+              - main
+      - deploy:
+          requires:
+            - build

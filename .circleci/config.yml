@@ -3,11 +3,11 @@ jobs:
   build:
     docker:
       - image: circleci/node:14
-    working_directory: ~/doomermeter/frontend
+    working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout
       - attach_workspace:
-          at: ~/doomermeter/frontend
+          at: ~/DoomerMeter/frontend
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package.json" }}
@@ -26,11 +26,11 @@ jobs:
   deploy:
     docker:
       - image: circleci/aws-cli
-    working_directory: ~/doomermeter/frontend
+    working_directory: ~/DoomerMeter/frontend
     steps:
       - checkout
       - attach_workspace:
-          at: ~/doomermeter/frontend
+          at: ~/DoomerMeter/frontend
       - run:
           name: Deploy to S3
           command: |

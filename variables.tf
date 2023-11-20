@@ -10,7 +10,7 @@ variable "root_domain" {
 
 variable "domain" {
     type = string
-    default = "doomermeter.kvargha.com"
+    default = "reddit-sentiment-meter.kvargha.com"
 }
 
 variable "ssl-cert-arn" {

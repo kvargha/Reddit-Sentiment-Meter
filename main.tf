@@ -342,7 +342,7 @@ resource "aws_apigatewayv2_integration" "sentiment-api" {
 resource "aws_apigatewayv2_route" "sentiment-api" {
   api_id = aws_apigatewayv2_api.sentiment-api.id
 
-  route_key = "GET /doom-level"
+  route_key = "GET /sentiment-level"
   target    = "integrations/${aws_apigatewayv2_integration.sentiment-api.id}"
 }
 
@@ -362,19 +362,19 @@ resource "aws_lambda_permission" "sentiment-api-gateway" {
 }
 
 # Create frontend bucket
-resource "aws_s3_bucket" "doomermeter" {
-  bucket = "doomermeter"
+resource "aws_s3_bucket" "redditSentimentMeter" {
+  bucket = "redditSentimentMeter"
 }
 
-resource "aws_s3_bucket_ownership_controls" "doomermeter" {
-  bucket = aws_s3_bucket.doomermeter.id
+resource "aws_s3_bucket_ownership_controls" "redditSentimentMeter" {
+  bucket = aws_s3_bucket.redditSentimentMeter.id
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "doomermeter" {
-  bucket = aws_s3_bucket.doomermeter.id
+resource "aws_s3_bucket_public_access_block" "redditSentimentMeter" {
+  bucket = aws_s3_bucket.redditSentimentMeter.id
 
   block_public_acls       = false
   block_public_policy     = false
@@ -382,18 +382,18 @@ resource "aws_s3_bucket_public_access_block" "doomermeter" {
   restrict_public_buckets = false
 }
 
-resource "aws_s3_bucket_acl" "doomermeter" {
+resource "aws_s3_bucket_acl" "redditSentimentMeter" {
   depends_on = [
-    aws_s3_bucket_ownership_controls.doomermeter,
-    aws_s3_bucket_public_access_block.doomermeter,
+    aws_s3_bucket_ownership_controls.redditSentimentMeter,
+    aws_s3_bucket_public_access_block.redditSentimentMeter,
   ]
 
-  bucket = aws_s3_bucket.doomermeter.id
+  bucket = aws_s3_bucket.redditSentimentMeter.id
   acl    = "public-read"
 }
 
-resource "aws_s3_bucket_policy" "doomermeter" {
-  bucket = "${aws_s3_bucket.doomermeter.id}"
+resource "aws_s3_bucket_policy" "redditSentimentMeter" {
+  bucket = "${aws_s3_bucket.redditSentimentMeter.id}"
 
   policy = <<POLICY
   {
@@ -403,16 +403,16 @@ resource "aws_s3_bucket_policy" "doomermeter" {
       "Effect":"Allow",
       "Principal":"*",
       "Action":["s3:GetObject"],
-      "Resource":["arn:aws:s3:::doomermeter/*"]
+      "Resource":["arn:aws:s3:::redditSentimentMeter/*"]
     }]
   }
   POLICY
 
-  depends_on = [aws_s3_bucket_acl.doomermeter]
+  depends_on = [aws_s3_bucket_acl.redditSentimentMeter]
 }
 
-resource "aws_s3_bucket_website_configuration" "doomermeter" {
-  bucket = aws_s3_bucket.doomermeter.id
+resource "aws_s3_bucket_website_configuration" "redditSentimentMeter" {
+  bucket = aws_s3_bucket.redditSentimentMeter.id
 
   index_document {
     suffix = "index.html"
@@ -423,8 +423,8 @@ resource "aws_s3_bucket_website_configuration" "doomermeter" {
   }
 }
 
-// Provisioner to install dependencies in doomermeter
-resource "null_resource" "doomermeter-install" {
+// Provisioner to install dependencies in redditSentimentMeter
+resource "null_resource" "redditSentimentMeter-install" {
 
   triggers = {
     updated_at = timestamp()
@@ -438,7 +438,7 @@ resource "null_resource" "doomermeter-install" {
 }
 
 // Creates build
-resource "null_resource" "doomermeter-build" {
+resource "null_resource" "redditSentimentMeter-build" {
 
   triggers = {
     updated_at = timestamp()
@@ -450,24 +450,24 @@ resource "null_resource" "doomermeter-build" {
     working_dir = "${path.module}/frontend/"
   }
 
-  depends_on = [null_resource.doomermeter-install]
+  depends_on = [null_resource.redditSentimentMeter-install]
 }
 
 // Upload build files
-resource "aws_s3_object" "doomermeter-build" {
+resource "aws_s3_object" "redditSentimentMeter-build" {
   for_each      = fileset(var.frontend_upload_directory, "**/*.*")
-  bucket        = aws_s3_bucket.doomermeter.bucket
+  bucket        = aws_s3_bucket.redditSentimentMeter.bucket
   key           = replace(each.value, var.frontend_upload_directory, "")
   source        = "${var.frontend_upload_directory}${each.value}"
   acl           = "public-read"
   etag          = filemd5("${var.frontend_upload_directory}${each.value}")
   content_type  = lookup(var.mime_types, split(".", each.value)[length(split(".", each.value)) - 1])
 
-  depends_on = [null_resource.doomermeter-build]
+  depends_on = [null_resource.redditSentimentMeter-build]
 }
 
 // Configure CloudFront CDN
-resource "aws_cloudfront_distribution" "doomermeter" {
+resource "aws_cloudfront_distribution" "redditSentimentMeter" {
   origin {
     custom_origin_config {
       http_port              = "80"
@@ -475,8 +475,8 @@ resource "aws_cloudfront_distribution" "doomermeter" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
     }
-    domain_name = aws_s3_bucket.doomermeter.bucket_domain_name
-    origin_id   = aws_s3_bucket.doomermeter.bucket
+    domain_name = aws_s3_bucket.redditSentimentMeter.bucket_domain_name
+    origin_id   = aws_s3_bucket.redditSentimentMeter.bucket
   }
 
   enabled             = true
@@ -487,7 +487,7 @@ resource "aws_cloudfront_distribution" "doomermeter" {
     compress               = true
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = aws_s3_bucket.doomermeter.bucket
+    target_origin_id       = aws_s3_bucket.redditSentimentMeter.bucket
     min_ttl                = 0
     default_ttl            = 86400
     max_ttl                = 3153600

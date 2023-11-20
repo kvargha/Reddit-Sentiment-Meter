@@ -1,6 +1,6 @@
 {
-  "short_name": "DoomerMeter",
-  "name": "DoomerMeter",
+  "short_name": "RedditSentimentMeter",
+  "name": "RedditSentimentMeter",
   "icons": [
     {
       "src": "favicon.ico",

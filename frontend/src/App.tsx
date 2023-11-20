@@ -33,24 +33,25 @@ function App() {
   const [numComments, setNumComments] = useState<number>(0);
   const [sentimentPercent, setSentimentPercent] = useState<number>(0);
 
+  // Interval time in milliseconds (e.g., 5 seconds)
+  // How often to call the Sentiment Level API
+  const intervalTime = 5000;
+
   // Calls Lambda API to get the number of comments and sentiment levels
   const callSentimentLevelAPI = async () => {
     try {
-      const response = await fetch("https://uqqojl9mv5.execute-api.us-west-2.amazonaws.com/prod/doom-level");
+      const response = await fetch("https://uqqojl9mv5.execute-api.us-west-2.amazonaws.com/prod/sentiment-level");
       const data = await response.json();
       
       // Process the retrieved data
       setNumComments(data["numComments"])
-      setSentimentPercent(data["doomLevel"])
+      setSentimentPercent(data["sentimentLevel"])
     } catch (error) {
       console.error("Error:", error);
     }
   };
 
   useEffect(() => {
-    // Interval time in milliseconds (e.g., 5 seconds)
-    const intervalTime = 5000;
-
     // Make initial call
     callSentimentLevelAPI();
 

@@ -20,7 +20,7 @@ REDDIT_CLIENT_SECRET = secrets["REDDIT_CLIENT_SECRET"]
 KAFKA_TOPIC = "reddit-comments"
 
 # Create reddit client
-user_agent = "DoomerMeter"
+user_agent = "RedditSentimentMeter"
 reddit = praw.Reddit(
     client_id=REDDIT_CLIENT_ID,
     client_secret=REDDIT_CLIENT_SECRET,

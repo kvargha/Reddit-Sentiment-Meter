@@ -22,7 +22,7 @@ export const handler = async () => {
     const data = dynamoDBResponse["Item"];
 
     let numComments = 0;
-    let doomLevel = 0;
+    let sentimentLevel = 0;
 
     // If the data for the day exists, extract the data
     if (data !== undefined) {
@@ -32,7 +32,7 @@ export const handler = async () => {
         numComments = positiveCount + negativeCount;
 
         if (numComments > 0) {
-            doomLevel = roundToTwo((negativeCount / numComments) * 100);
+            sentimentLevel = roundToTwo((negativeCount / numComments) * 100);
         }
     }
 
@@ -43,7 +43,7 @@ export const handler = async () => {
         },
         body: JSON.stringify({
             numComments: numComments,
-            doomLevel: doomLevel
+            sentimentLevel: sentimentLevel
         })
     }
 };

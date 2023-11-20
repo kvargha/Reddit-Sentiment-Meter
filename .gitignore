@@ -7,3 +7,5 @@ terraform.tfstate
 
 reddit-producer.zip
 secrets.json
+
+node_modules/

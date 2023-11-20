@@ -31,17 +31,17 @@ const Main = styled("main")<{}>(({ theme }) => ({
 
 function App() {
   const [numComments, setNumComments] = useState<number>(0);
-  const [doomPercent, setDoomPercent] = useState<number>(0);
+  const [sentimentPercent, setSentimentPercent] = useState<number>(0);
 
-  // Calls Lambda API to get the number of comments and doom levels
-  const callDoomAPI = async () => {
+  // Calls Lambda API to get the number of comments and sentiment levels
+  const callSentimentLevelAPI = async () => {
     try {
       const response = await fetch("https://uqqojl9mv5.execute-api.us-west-2.amazonaws.com/prod/doom-level");
       const data = await response.json();
       
       // Process the retrieved data
       setNumComments(data["numComments"])
-      setDoomPercent(data["doomLevel"])
+      setSentimentPercent(data["doomLevel"])
     } catch (error) {
       console.error("Error:", error);
     }
@@ -52,10 +52,10 @@ function App() {
     const intervalTime = 5000;
 
     // Make initial call
-    callDoomAPI();
+    callSentimentLevelAPI();
 
     // Start the interval
-    const intervalId = setInterval(callDoomAPI, intervalTime);
+    const intervalId = setInterval(callSentimentLevelAPI, intervalTime);
 
     // Clean up the interval on component unmount
     return () => {
@@ -70,7 +70,7 @@ function App() {
         <AppBar position="fixed">
           <Toolbar>
             <Typography variant="h6" component="div">
-              DoomerMeter
+              Reddit Sentiment Meter
             </Typography>
           </Toolbar>
         </AppBar>
@@ -111,11 +111,11 @@ function App() {
                 { color: '#DC143C' }
               ]
             }}
-            value={doomPercent}
+            value={sentimentPercent}
             pointer={{type: "needle"}}
           />
 
-          <Typography variant="h5">Doomer Level</Typography>
+          <Typography variant="h5">Sentiment Level</Typography>
         </Main>
       </Box>
     </ThemeProvider>

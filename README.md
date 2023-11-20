@@ -13,7 +13,7 @@ The entire AWS infrastructure is modeled in Terraform, and deployments are autom
 [Demo Video](https://www.youtube.com/watch?v=JlOtfsvV2Ps)
 
 ### Frontend Screenshot
-![DoomerMeter Screenshot](./DoomerMeter-Screenshot.png)
+![Reddit Sentiment Meter Screenshot](./RedditSentimentMeter-Screenshot.png)
 
 ### System Design
 

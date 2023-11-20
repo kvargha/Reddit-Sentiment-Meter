@@ -4,10 +4,10 @@ jobs:
   build:
     docker:
       - image: node:18
-    working_directory: ~/DoomerMeter/frontend
+    working_directory: ~/RedditSentimentMeter/frontend
     steps:
       - checkout:
-          path: ~/DoomerMeter
+          path: ~/RedditSentimentMeter
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "package.json" }}
@@ -30,10 +30,10 @@ jobs:
   deploy:
     docker:
       - image: cibuilds/aws:latest
-    working_directory: ~/DoomerMeter/frontend
+    working_directory: ~/RedditSentimentMeter/frontend
     steps:
       - checkout:
-          path: ~/DoomerMeter
+          path: ~/RedditSentimentMeter
       - attach_workspace:
           at: .
       - run:
